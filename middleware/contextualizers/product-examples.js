@@ -1,5 +1,4 @@
-import getApplicableVersions from '../../lib/get-applicable-versions.js'
-import { getDataByLanguage } from '../../lib/get-data.js'
+import { getDataByLanguage } from '#src/data-directory/lib/get-data.js'
 
 function getProductExampleData(product, key, language) {
   // Because getDataByLanguage() depends on reading data files from
@@ -26,31 +25,13 @@ export default async function productExamples(req, res, next) {
   req.context.productCommunityExamples = getProductExampleData(
     currentProduct,
     'community-examples',
-    currentLanguage
+    currentLanguage,
   )
   req.context.productUserExamples = getProductExampleData(
     currentProduct,
     'user-examples',
-    currentLanguage
+    currentLanguage,
   )
-
-  const productCodeExamples = getProductExampleData(
-    currentProduct,
-    'code-examples',
-    currentLanguage
-  )
-
-  // We currently only support versioning in code examples.
-  // TODO support versioning across all example types.
-  req.context.productCodeExamples =
-    productCodeExamples &&
-    productCodeExamples.filter((example) => {
-      // If an example block does NOT contain the versions prop, assume it's available in all versions
-      return (
-        !example.versions ||
-        getApplicableVersions(example.versions).includes(req.context.currentVersion)
-      )
-    })
 
   return next()
 }

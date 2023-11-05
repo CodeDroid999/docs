@@ -8,10 +8,7 @@ redirect_from:
   - /issues/tracking-your-work-with-issues/creating-issues/about-task-lists
   - /issues/tracking-your-work-with-issues/about-task-lists
 versions:
-  fpt: '*'
-  ghes: '*'
-  ghae: '*'
-  ghec: '*'
+  feature: task-lists-v1
 topics:
   - Pull requests
   - Issues
@@ -20,7 +17,7 @@ topics:
 {% ifversion projects-v2-tasklists %}
 {% note %}
 
-**Note:** For more information about the new iteration of tasklists, which is currently in a private beta, see "[AUTOTITLE](/issues/tracking-your-work-with-issues/about-tasklists)."
+**Note:** For more information about the new iteration of tasklists, which is currently in beta, see "[AUTOTITLE](/issues/tracking-your-work-with-issues/about-tasklists)."
 
 {% endnote %}
 {% endif %}
@@ -68,6 +65,12 @@ You can reorder tasks across different lists in the same comment, but you cannot
 
 {% ifversion fpt %}
 
+## Converting tasks into issues
+
+You can also convert tasks into issues. First, hover over one of the items in your task list and then click {% octicon "issue-opened" aria-label="Convert to issue" %}.
+
+ {% ifversion fpt or ghec %} ![Screenshot of a {% data variables.product.prodname_dotcom %} issue showing two tasks. The"Convert to issue" icon is highlighted with an orange outline.](/assets/images/help/writing/convert-task-lists-into-issues.png){% endif %}
+
 ## Navigating tracked issues
 
 Any issues that are referenced in a task list specify that they are tracked by the issue that contains the task list. To navigate to the tracking issue from the tracked issue, click on the tracking issue number in the **Tracked in** section next to the issue status.
@@ -76,7 +79,8 @@ Any issues that are referenced in a task list specify that they are tracked by t
 
 {% endif %}
 
+{% ifversion code-scanning-task-lists %}
+
 ## Further reading
 
-{% ifversion code-scanning-task-lists %}
-* "[AUTOTITLE](/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/tracking-code-scanning-alerts-in-issues-using-task-lists)"{% endif %}
+- "[AUTOTITLE](/code-security/code-scanning/managing-code-scanning-alerts/tracking-code-scanning-alerts-in-issues-using-task-lists)"{% endif %}

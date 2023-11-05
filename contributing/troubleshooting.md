@@ -1,16 +1,16 @@
 # Troubleshooting <!-- omit in toc -->
 
-- [Troubleshooting server tests that fail locally but pass in CI](#troublshooting-server-tests-that-fail-locally-but-pass-in-ci)
-- [Troubleshooting stalled deployments and CI](#troubleshooting-stalled-deployments-and-ci)
+- [Troubleshooting](#troubleshooting)
+  - [Troubleshooting server tests that fail locally but pass in CI](#troubleshooting-server-tests-that-fail-locally-but-pass-in-ci)
   - [Staging deployment stalled](#staging-deployment-stalled)
   - [CI stalled or stuck](#ci-stalled-or-stuck)
-- [Troubleshooting failed deployments and CI](#troubleshooting-failed-deployments-and-ci)
   - [Can't run the site locally](#cant-run-the-site-locally)
   - [Failed staging deployment](#failed-staging-deployment)
   - [500 error on specific page on staging](#500-error-on-specific-page-on-staging)
 - [Check internal links](#check-internal-links)
 - [Check external links](#check-external-links)
 - [Debugging locally](#debugging-locally)
+- [Liquid processing](#liquid-processing)
 
 ## Troubleshooting
 
@@ -27,37 +27,35 @@ If a staging deployment is pending for more than 5-10min, try the following:
 2. If that doesn't work, trigger a new staging deployment by pushing an empty commit on the command line:
 
 ```
-$ git commit --allow-empty -m 'empty commit to redeploy staging'
+git commit --allow-empty -m 'empty commit to redeploy staging'
 ```
 
 ### CI stalled or stuck
 :yellow_heart: If tests are stuck yellow for more than an hour, rerun CI by pushing an empty commit on the command line:
 
 ```
-$ git commit --allow-empty -m 'empty commit to rerun CI'
+git commit --allow-empty -m 'empty commit to rerun CI'
 ```
-
-## Troubleshooting failed deployments and CI
 
 ### Can't run the site locally
-If you are running `script/server` and get a `Cannot find module` error, try:
+If you are running `npm start` and get a `Cannot find module` error, try:
 
 ```
-$ npm install
+npm install
 ```
 
 If that doesn't fix it, try:
 
 ```
-$ rm -rf node_modules
-$ npm install
+rm -rf node_modules
+npm install
 ```
 
 ### Failed staging deployment
 Check out the branch and run the site locally:
 
 ```
-$ script/server
+npm start
 ```
 
 Go to https://localhost:4000
@@ -79,7 +77,7 @@ make sure single quotes are properly escaped in the frontmatter. Also, check the
 Check out the branch and run the site locally:
 
 ```
-$ script/server
+npm start
 ```
 
 Go to whatever page is 500ing on staging on your local server: https://localhost:4000/page-with-error

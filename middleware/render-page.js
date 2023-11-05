@@ -1,21 +1,26 @@
+import http from 'http'
+
 import { get } from 'lodash-es'
 
-import FailBot from '../lib/failbot.js'
-import patterns from '../lib/patterns.js'
-import getMiniTocItems from '../lib/get-mini-toc-items.js'
-import Page from '../lib/page.js'
-import statsd from '../lib/statsd.js'
-import { allVersions } from '../lib/all-versions.js'
+import FailBot from '#src/observability/lib/failbot.js'
+import patterns from '#src/frame/lib/patterns.js'
+import getMiniTocItems from '#src/frame/lib/get-mini-toc-items.js'
+import { pathLanguagePrefixed } from '#src/languages/lib/languages.js'
+import statsd from '#src/observability/lib/statsd.js'
+import { allVersions } from '#src/versions/lib/all-versions.js'
 import { isConnectionDropped } from './halt-on-dropped-connection.js'
-import { nextApp, nextHandleRequest } from './next.js'
+import { nextHandleRequest } from './next.js'
 import { defaultCacheControl } from './cache-control.js'
+
+const STATSD_KEY_RENDER = 'middleware.render_page'
+const STATSD_KEY_404 = 'middleware.render_404'
 
 async function buildRenderedPage(req) {
   const { context } = req
   const { page } = context
   const path = req.pagePath || req.path
 
-  const pageRenderTimed = statsd.asyncTimer(page.render, 'middleware.render_page', [`path:${path}`])
+  const pageRenderTimed = statsd.asyncTimer(page.render, STATSD_KEY_RENDER, [`path:${path}`])
 
   return await pageRenderTimed(context)
 }
@@ -48,10 +53,62 @@ export default async function renderPage(req, res) {
   if (!page) {
     if (process.env.NODE_ENV !== 'test' && context.redirectNotFound) {
       console.error(
-        `\nTried to redirect to ${context.redirectNotFound}, but that page was not found.\n`
+        `\nTried to redirect to ${context.redirectNotFound}, but that page was not found.\n`,
       )
     }
-    return nextApp.render404(req, res)
+
+    if (!pathLanguagePrefixed(req.path)) {
+      defaultCacheControl(res)
+      return res.status(404).type('text').send('Not found')
+    }
+
+    // The rest is "unhandled" requests where we don't have the page
+    // but the URL looks like a real page.
+
+    statsd.increment(STATSD_KEY_404, 1, [
+      `url:${req.url}`,
+      `ip:${req.ip}`,
+      `path:${req.path}`,
+      `referer:${req.headers.referer || ''}`,
+    ])
+
+    // This means, we allow the CDN to cache it, but to be purged at the
+    // next deploy. The length isn't very important as long as it gets
+    // a new chance after the next deploy + purge.
+    // This way, we only have to repond with this 404 once per deploy
+    // and the CDN can cache it.
+    defaultCacheControl(res)
+
+    // The reason we're *NOT* using `nextApp.render404` is because, in
+    // Next v13, is for two reasons:
+    //
+    //  1. You can not control the `cache-control` header. It always
+    //     gets set to `private, no-cache, no-store, max-age=0, must-revalidate`.
+    //     which is causing problems with Fastly because then we can't
+    //     let Fastly cache it till the next purge, even if we do set a
+    //     `Surrogate-Control` header.
+    //  2. In local development, it will always hang and never respond.
+    //     Eventually you get a timeout error (503) after 10 seconds.
+    //
+    // The solution is to render a custom page (which is the
+    // src/pages/404.tsx) but control the status code (and the Cache-Control).
+    //
+    // Create a new request for a real one.
+    const tempReq = new http.IncomingMessage(req)
+    tempReq.method = 'GET'
+    // There is a `src/pages/_notfound.txt`. That's why this will render
+    // a working and valid React component.
+    // It's important to not use `src/pages/404.txt` (or `/404` as the path)
+    // here because then it will set the wrong Cache-Control header.
+    tempReq.url = '/_notfound'
+    tempReq.path = '/_notfound'
+    tempReq.cookies = {}
+    tempReq.headers = {}
+    // By default, since the lookup for a `src/pages/*.tsx` file will work,
+    // inside the `nextHandleRequest` function, by default it will
+    // think it all worked with a 200 OK.
+    res.status(404)
+    return nextHandleRequest(tempReq, res)
   }
 
   // Just finish fast without all the details like Content-Length
@@ -67,9 +124,6 @@ export default async function renderPage(req, res) {
     // 500 error.
     res.setHeader('Last-Modified', new Date(page.effectiveDate).toUTCString())
   }
-
-  // collect URLs for variants of this page in all languages
-  page.languageVariants = Page.getLanguageVariants(path)
 
   // Stop processing if the connection was already dropped
   if (isConnectionDropped(req, res)) return
